@@ -34,7 +34,7 @@
   "development_rows": 3081619,
   "final_holdout_rows": 543876,
   "final_holdout_scored_rows": 543876,
-  "final_holdout_weighted_pearson": 0.038949452426264124,
+  "final_holdout_weighted_pearson": 0.048559143672188936,
   "final_holdout_naive_return_1m_weighted_pearson": -0.007867276769685861,
   "evaluation_note": "The final holdout was not used for candidate selection. It remains historical research, not a live trading claim.",
   "prepared_window": {

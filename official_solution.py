@@ -167,7 +167,12 @@ def fit(config: ModelConfig, train: pd.DataFrame, validation: pd.DataFrame | Non
     model = lgb.LGBMRegressor(objective="regression", learning_rate=config.learning_rate, num_leaves=config.num_leaves,
         min_child_samples=config.min_child_samples, colsample_bytree=config.feature_fraction, reg_lambda=config.reg_lambda,
         n_estimators=config.n_estimators, random_state=RANDOM_SEED, n_jobs=-1, verbosity=-1)
-    arguments: dict[str, object] = {"sample_weight": train["weight"], "callbacks": [lgb.log_evaluation(period=0)]}
+    # Asset_ID is an identity label, not a quantity with meaningful distance.
+    arguments: dict[str, object] = {
+        "sample_weight": train["weight"],
+        "categorical_feature": ["asset_id"],
+        "callbacks": [lgb.log_evaluation(period=0)],
+    }
     if validation is not None:
         arguments["eval_set"] = [(validation[FEATURES], validation["target"])]
         arguments["eval_sample_weight"] = [validation["weight"]]

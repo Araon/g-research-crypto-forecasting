@@ -22,8 +22,8 @@ archive, then keeps the latest 15% of timestamps as an untouched holdout.
 | Development rows | `3,081,619` |
 | Final holdout rows | `543,876` |
 | Embargo between partitions | `16 minutes` |
-| Mean weighted Pearson during selection | `0.01848` |
-| Final holdout weighted Pearson | `0.03895` |
+| Mean weighted Pearson during selection | `0.02298` |
+| Final holdout weighted Pearson | `0.04856` |
 | Naive one-minute-return holdout score | `-0.00787` |
 
 ![Official multi-asset research report](outputs/official_research_report.png)
