@@ -1,0 +1,5 @@
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+matplotlib>=3.9
+git+https://github.com/Kaggle/kagglehub.git@d319ac2f52ee060954c252a2e51e50fe1b9b25d4

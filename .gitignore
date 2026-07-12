@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.py[cod]
+data/
+outputs/model.joblib
+outputs/test_prediction_sample.csv
