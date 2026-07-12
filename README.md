@@ -1,63 +1,118 @@
-# G-Research Crypto Forecasting Baseline
+# G-Research Crypto Forecasting
 
-An end-to-end, leakage-aware research baseline for a public mirror of Kaggle's
-G-Research Crypto Forecasting data. The project trains a histogram gradient
-boosting model on minute-bar features, selects its configuration using
-expanding chronological folds, and evaluates a later embargoed holdout.
+This is a reproducible research baseline for Kaggle's **G-Research Crypto
+Forecasting** competition. It predicts the supplied short-horizon crypto target
+from completed one-minute candles. It is a learning project and historical
+backtest, not a live trading system or evidence of a tradeable strategy.
 
-## Verified Result
+The main pipeline uses the original 14-asset training archive and its official
+asset weights. An earlier Cardano-only public mirror baseline remains in
+`advanced_solution.py` as a smaller smoke test; do not compare its equal-weight
+score directly with the official multi-asset result.
 
-The checked run uses a 2018 Cardano-only slice with 372,665 rows.
+## Checked Official Run
 
-| Metric | Result |
+The current checked run extracts the final 180 calendar days from the original
+archive, then keeps the latest 15% of timestamps as an untouched holdout.
+
+| Item | Checked value |
 | --- | ---: |
-| Mean three-fold validation weighted Pearson | `0.02690` |
-| Final retrospective holdout weighted Pearson | `0.03611` |
-| Matched-coverage one-minute-return baseline | `-0.00913` |
-| Final holdout rows scored | `55,884` |
+| Original source rows in prepared window | `3,627,788` |
+| Assets | `14` |
+| Development rows | `3,081,619` |
+| Final holdout rows | `543,876` |
+| Embargo between partitions | `16 minutes` |
+| Mean weighted Pearson during selection | `0.01848` |
+| Final holdout weighted Pearson | `0.03895` |
+| Naive one-minute-return holdout score | `-0.00787` |
 
-The holdout result is labelled retrospective because an earlier exploratory
-version inspected that period. Configuration selection in the checked version
-uses only the three expanding validation folds.
+![Official multi-asset research report](outputs/official_research_report.png)
 
-![Research report](outputs/research_report.png)
+### Reading the Report
 
-## Method
+The left bars compare candidate models on two **expanding validation folds**:
+each later fold trains on all prior data, then predicts a future block. Higher
+weighted Pearson means the model's predictions and target moved together more
+often after applying the competition's asset importance weights. The bars are
+small because correlation is a hard metric, not a percentage of correct trades.
 
-- **Features**: lagged returns over 1/5/15/30/60 minutes, 15- and 60-row
-  volatility, relative volume, candle shape, VWAP gap, and cyclical time
-  features.
-- **Point-in-time safety**: features only use the current completed candle and
-  prior observations. Return features are invalidated whenever a source gap
-  breaks the requested calendar-time lag.
-- **Validation**: three expanding windows select between two gradient-boosting
-  configurations. A 16-minute calendar embargo separates every training,
-  validation, and holdout boundary to account for the forward-looking target.
-- **Metric**: strict weighted Pearson correlation. Every model and baseline is
-  scored on the same rows; invalid predictions or non-positive weights fail the
-  run rather than being silently omitted.
-- **Artifacts**: the run saves selection scores, a trained model, final
-  metrics, source SHA-256, package versions, a prediction sample, and a visual
-  report under `outputs/`.
+The right chart gives one weighted Pearson score for each calendar day in the
+final holdout. The horizontal zero line separates days where the ranking moved
+with the target from days where it moved against it. Variation above and below
+zero is expected in noisy financial data. The overall score is calculated from
+all holdout rows, so this chart is useful for judging stability, not for
+cherry-picking its best day.
 
-## Run It
+## Why the Validation Is Time-Aware
+
+The target in this competition incorporates future movement. A random train/test
+split would mix near-neighbour minutes across train and test and make the model
+look stronger than it really is. This project instead uses:
+
+- **Expanding folds**: train on the past and validate on a later period.
+- **A 16-minute embargo**: leave a gap at every boundary so a target's
+  forward-looking window cannot spill into the other partition.
+- **Strict weighted Pearson**: every target, prediction, and official weight
+  must be finite; the script fails instead of quietly dropping invalid rows.
+- **Matched baseline coverage**: the naive one-minute return is zero where a
+  true one-minute lag is unavailable, rather than deleting difficult rows.
+
+## Features
+
+All features are available after the current one-minute candle has closed:
+
+- 1/5/15/60 minute returns, rolling volatility, and relative volume per asset.
+- Candle shape: open-to-close move, high-low range, and close-to-VWAP gap.
+- Cross-market context: weighted market returns, market breadth, and an
+  asset's return relative to the market move.
+- Cyclical minute-of-day and day-of-week encodings.
+
+The gradient-boosting model is LightGBM. Its two configurations are selected by
+the chronological folds only; the later final holdout is never used to choose a
+candidate.
+
+## Reproduce the Official Pipeline
+
+You need a Kaggle token with access to the public archive. The `orig_train.jay`
+file is large, so expect the initial download and extraction to take time and
+disk space.
 
 ```bash
+# Main model environment (Python 3.13 was used for the checked run)
 python3.13 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python download_data.py
+
+# macOS requirement for LightGBM's OpenMP runtime
+brew install libomp
+
+# Separate Python 3.11 environment for the JAY reader
+python3.11 -m venv .jay-venv
+.jay-venv/bin/pip install -r requirements-ingest.txt
+
+# Download the original archive files and prepare a reproducible 180-day window
+.venv/bin/python download_official_data.py
+.jay-venv/bin/python prepare_official_data.py --days 180
+
+# Check metrics and fit the official multi-asset model
 .venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python advanced_solution.py
+.venv/bin/python official_solution.py
 ```
 
-## Data and Scope
+The preparation step writes `data/official/train_last_180_days.manifest.json`
+with input SHA-256 hashes, time range, row count, and asset names. The model
+writes selection scores, final metrics, per-asset holdout scores, a LightGBM
+model file, a prediction sample, and the report image under `outputs/`.
 
-The script downloads `full_data__3__2018.csv` from the public Kaggle archive
-`yamqwe/cryptocurrency-extra-data-cardano`. This is not the complete original
-competition training set: it contains one asset and does not populate the
-original competition weights. The code therefore evaluates with equal weights,
-which is clearly recorded in `outputs/metrics.json`.
+## Data Source and Scope
 
-This is research code, not a live trading system. The next credible step is to
-run the same pipeline on an untouched later period and the original multi-asset
-data before making any performance claim.
+`download_official_data.py` fetches archive version 35 of
+`yamqwe/cryptocurrency-extra-data-cardano`. Despite that archive name, the
+files used by the official pipeline are the original G-Research competition
+artifacts: `orig_train.jay`, `orig_asset_details.jay`, and the example test and
+submission files. The pipeline does not mix these with reconstructed Cardano
+CSV target data.
+
+This work does not include transaction costs, execution latency, position
+sizing, a live data feed, or post-competition market testing. Those are
+separate problems that must be solved before treating a forecasting signal as a
+trading strategy.

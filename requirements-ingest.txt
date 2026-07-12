@@ -1,0 +1,4 @@
+# JAY ingestion environment. Use Python 3.11; datatable does not support Python 3.13.
+datatable==1.1.0
+pandas>=2.2
+pyarrow>=16

@@ -1,6 +1,10 @@
 .venv/
+.jay-venv/
+.vscode/
 __pycache__/
 *.py[cod]
 data/
 outputs/model.joblib
 outputs/test_prediction_sample.csv
+outputs/official_model.txt
+outputs/official_holdout_prediction_sample.parquet
